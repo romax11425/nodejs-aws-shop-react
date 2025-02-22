@@ -1,8 +1,20 @@
 # React-shop-cloudfront
 
 task-2:
-CloudFront URL: https://d3gy632d08bc0y.cloudfront.net/
+Ручное развертывание
+
 S3-website URL: http://my-first-rs-app114.s3-website-eu-west-1.amazonaws.com/
+CloudFront URL: https://d3gy632d08bc0y.cloudfront.net/
+
+Автоматизированное развертывание
+
+S3-website URL: http://mywebappstack-websitebucket75c24d94-hrwf7vint4rh.s3-website-eu-west-1.amazonaws.com/
+CloudFront URL: https://d3r7eavge0q46c.cloudfront.net
+
+Оценка: 100 / 100
+Руководство: S3 Bucket создан с публичным доступом и доступен через Интернет.
+Руководство: Создан дистрибутив CloudFront, отключен публичный доступ к S3 Bucket
+Автоматизировано: создано развертывание S3 Bucket и CloundFront с AWS CDK
 
 This is frontend starter project for nodejs-aws mentoring program. It uses the following technologies:
 
