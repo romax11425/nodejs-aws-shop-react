@@ -1,8 +1,8 @@
-import React, { useRef } from 'react';
-import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import axios from "axios";
+import React from "react";
+import Typography from "@mui/material/Typography";
+import Box from "@mui/material/Box";
+import axios, { AxiosError } from "axios";
+import { useMutation } from "react-query";
 
 type CSVFileImportProps = {
   url: string;
@@ -11,7 +11,29 @@ type CSVFileImportProps = {
 
 export default function CSVFileImport({ url, title }: CSVFileImportProps) {
   const [file, setFile] = React.useState<File>();
-  const uploadInputRef = useRef<HTMLInputElement | null>(null);
+
+  const authToken = localStorage.getItem("authorization_token")
+  let headers: any = {}
+  if (authToken) headers.Authorization = `Basic ${localStorage.getItem("authorization_token")}`;
+
+  const { mutateAsync: preSignFileImportUrl } = useMutation<string, AxiosError, { url: string; fileName: string }>(
+    async ({ url, fileName }: { url: string; fileName: string }) => {
+      return axios
+        .get(url, {
+          params: { name: fileName },
+          headers,
+        })
+        .then((res) => res.data)
+        .catch((error) => {
+          if (error.response?.status === 401) {
+            window.dispatchEvent(new CustomEvent("global-toast", { detail: { message: "401 Unauthorized", severity: "error" } }));
+          }
+          if (error.response?.status === 403) {
+            window.dispatchEvent(new CustomEvent("global-toast", { detail: { message: "403 Forbidden", severity: "error" } }));
+          }
+    });
+    }
+  );
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -26,30 +48,25 @@ export default function CSVFileImport({ url, title }: CSVFileImportProps) {
   };
 
   const uploadFile = async () => {
-    console.log('uploadFile to:', url);
-    setFile(undefined);
-  
+    console.log("uploadFile to", url);
 
-    if (!file) {
-      return;
+    try {
+      // Get the presigned URL
+      const preSignedUrl = await preSignFileImportUrl({
+        url,
+        fileName: encodeURIComponent(file?.name || ''),
+      });
+      console.log("File to upload: ", file?.name);
+      console.log("Uploading to: ", preSignedUrl);
+      const result = await fetch(preSignedUrl, {
+        method: "PUT",
+        body: file,
+      });
+      console.log("Result: ", result);
+      setFile(undefined);
+    } catch (error) {
+      console.error("There was an error uploading the file", error);
     }
-
-    const response = await axios({
-      method: "GET",
-      url,
-      params: {
-        name: encodeURIComponent(file.name),
-      },
-    });
-    console.log("File to upload: ", file.name);
-    console.log("Uploading to: ", response.data);
-    const result = await fetch(response.data, {
-      method: "PUT",
-      body: file,
-    });
-    console.log("Result: ", result);
-    setFile(undefined);
-    
   };
   return (
     <Box>
@@ -57,31 +74,11 @@ export default function CSVFileImport({ url, title }: CSVFileImportProps) {
         {title}
       </Typography>
       {!file ? (
-        <>
-          <input
-            hidden
-            type="file"
-            accept=".csv,.json"
-            onChange={onFileChange}
-            ref={uploadInputRef}
-          />
-          <Button
-            size="small"
-            color="primary"
-            variant="contained"
-            onClick={() => uploadInputRef.current && uploadInputRef.current.click()}
-          >
-            Select File
-          </Button>
-        </>
+        <input type="file" onChange={onFileChange} />
       ) : (
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <Button size="small" color="warning" variant="contained" onClick={removeFile}>
-            Remove file
-          </Button>
-          <Button size="small" color="primary" variant="contained" onClick={uploadFile}>
-            Upload file
-          </Button>
+        <div>
+          <button onClick={removeFile}>Remove file</button>
+          <button onClick={uploadFile}>Upload file</button>
         </div>
       )}
     </Box>
