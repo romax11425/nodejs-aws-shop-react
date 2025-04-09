@@ -1,17 +1,39 @@
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import React from "react";
 import { useQuery, useQueryClient, useMutation } from "react-query";
 import API_PATHS from "~/constants/apiPaths";
 import { CartItem } from "~/models/CartItem";
+import { useAvailableProducts } from "./products";
+
+type CartResponse = {
+  productId: string;
+  count: number;
+}[];
 
 export function useCart() {
-  return useQuery<CartItem[], AxiosError>("cart", async () => {
-    const res = await axios.get<CartItem[]>(`${API_PATHS.cart}/profile/cart`, {
-      headers: {
-        Authorization: `Basic ${localStorage.getItem("authorization_token")}`,
-      },
-    });
-    return res.data;
+  const { data: products } = useAvailableProducts();
+
+  return useQuery({
+    queryKey: ["cart"],
+    queryFn: async () => {
+      const token = localStorage.getItem("authorization_token");
+      const res = await axios.get<CartResponse>(
+        `${API_PATHS.cart}/api/profile/cart`,
+        {
+          headers: {
+            Authorization: token && `Basic ${token}`,
+          },
+        }
+      );
+      return res.data;
+    },
+    select: (items) => {
+      return items.reduce<CartItem[]>((result, item) => {
+        const product = products?.find(({ id }) => id === item.productId);
+        if (!product) return result;
+        return [...result, { product, count: item.count }];
+      }, []);
+    },
   });
 }
 
@@ -29,11 +51,12 @@ export function useInvalidateCart() {
 }
 
 export function useUpsertCart() {
-  return useMutation((values: CartItem) =>
-    axios.put<CartItem[]>(`${API_PATHS.cart}/profile/cart`, values, {
+  return useMutation((values: CartItem) => {
+    const token = localStorage.getItem("authorization_token");
+    return axios.put<CartItem[]>(`${API_PATHS.cart}/api/profile/cart`, values, {
       headers: {
-        Authorization: `Basic ${localStorage.getItem("authorization_token")}`,
+        Authorization: token && `Basic ${token}`,
       },
-    })
-  );
+    });
+  });
 }

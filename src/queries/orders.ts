@@ -1,14 +1,34 @@
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import React from "react";
 import { useQuery, useQueryClient, useMutation } from "react-query";
 import API_PATHS from "~/constants/apiPaths";
 import { OrderStatus } from "~/constants/order";
 import { Order } from "~/models/Order";
 
+type FinishedOrder = {
+  id: string;
+  userId: string;
+  cartId: string;
+  comments: string | null;
+  delivery: string;
+  payment: string;
+  status: string;
+  total: string;
+};
+
 export function useOrders() {
-  return useQuery<Order[], AxiosError>("orders", async () => {
-    const res = await axios.get<Order[]>(`${API_PATHS.order}/order`);
-    return res.data;
+  return useQuery({
+    queryKey: ["orders"],
+    queryFn: async () => {
+      const token = localStorage.getItem("authorization_token");
+      const res = await axios.get<FinishedOrder[]>(`${API_PATHS.order}/order`, {
+        headers: {
+          Authorization: token && `Basic ${token}`,
+        },
+      });
+
+      return res.data;
+    },
   });
 }
 
@@ -34,12 +54,20 @@ export function useUpdateOrderStatus() {
 }
 
 export function useSubmitOrder() {
-  return useMutation((values: Omit<Order, "id">) => {
-    return axios.put<Omit<Order, "id">>(`${API_PATHS.order}/order`, values, {
-      headers: {
-        Authorization: `Basic ${localStorage.getItem("authorization_token")}`,
-      },
-    });
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (values: Omit<Order, "id">) => {
+      const token = localStorage.getItem("authorization_token");
+      return axios.put(`${API_PATHS.order}/order`, values, {
+        headers: { Authorization: token && `Basic ${token}` },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["orders"],
+      });
+    },
   });
 }
 
