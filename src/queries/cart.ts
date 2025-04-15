@@ -1,45 +1,23 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import React from "react";
 import { useQuery, useQueryClient, useMutation } from "react-query";
 import API_PATHS from "~/constants/apiPaths";
-import { CartItem } from "~/models/CartItem";
-import { useAvailableProducts } from "./products";
-
-type CartResponse = {
-  productId: string;
-  count: number;
-}[];
+import { Cart, CartItem } from "~/models/CartItem";
 
 export function useCart() {
-  const { data: products } = useAvailableProducts();
-
-  return useQuery({
-    queryKey: ["cart"],
-    queryFn: async () => {
-      const token = localStorage.getItem("authorization_token");
-      const res = await axios.get<CartResponse>(
-        `${API_PATHS.cart}/api/profile/cart`,
-        {
-          headers: {
-            Authorization: token && `Basic ${token}`,
-          },
-        }
-      );
-      return res.data;
-    },
-    select: (items) => {
-      return items.reduce<CartItem[]>((result, item) => {
-        const product = products?.find(({ id }) => id === item.productId);
-        if (!product) return result;
-        return [...result, { product, count: item.count }];
-      }, []);
-    },
+  return useQuery<Cart[], AxiosError>("cart", async () => {
+    const res = await axios.get<Cart[]>(`${API_PATHS.cart}/profile/cart`, {
+      headers: {
+        Authorization: `Basic ${localStorage.getItem("authorization_token")}`,
+      },
+    });
+    return res.data;
   });
 }
 
 export function useCartData() {
   const queryClient = useQueryClient();
-  return queryClient.getQueryData<CartItem[]>("cart");
+  return queryClient.getQueryData<Cart[]>("cart");
 }
 
 export function useInvalidateCart() {
@@ -51,12 +29,11 @@ export function useInvalidateCart() {
 }
 
 export function useUpsertCart() {
-  return useMutation((values: CartItem) => {
-    const token = localStorage.getItem("authorization_token");
-    return axios.put<CartItem[]>(`${API_PATHS.cart}/api/profile/cart`, values, {
+  return useMutation((values: CartItem) =>
+    axios.put<CartItem[]>(`${API_PATHS.cart}/profile/cart`, values, {
       headers: {
-        Authorization: token && `Basic ${token}`,
+        Authorization: `Basic ${localStorage.getItem("authorization_token")}`,
       },
-    });
-  });
+    })
+  );
 }

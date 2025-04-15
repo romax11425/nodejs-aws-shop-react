@@ -34,16 +34,15 @@ export default function Orders() {
           {data?.map((order) => (
             <TableRow key={order.id}>
               <TableCell component="th" scope="row">
-                {JSON.parse(order.delivery)?.firstName}{" "}
-                {JSON.parse(order.delivery)?.lastName}
+                {order.payment.email}
+              </TableCell>
+              <TableCell align="right">{order.items?.length}</TableCell>
+              <TableCell align="right">
+                {order.delivery?.zip}, {order.delivery?.city}, {order.delivery?.address}
               </TableCell>
               <TableCell align="right">
-                {JSON.parse(order.payment)?.length}
+                {order.status}
               </TableCell>
-              <TableCell align="right">
-                {JSON.parse(order.delivery)?.address}
-              </TableCell>
-              <TableCell align="right">{order.status}</TableCell>
               <TableCell align="right">
                 <Button
                   size="small"
