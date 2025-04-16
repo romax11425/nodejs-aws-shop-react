@@ -4,6 +4,7 @@ from aws_cdk import (
     aws_cloudfront as cloudfront,
     aws_cloudfront_origins as origins,
     aws_s3_deployment as s3deploy,
+    aws_iam as iam,
     RemovalPolicy,
     CfnOutput
 )
@@ -66,7 +67,34 @@ class MyWebAppStack(Stack):
             distribution_paths=["/*"]
         )
 
-        # Output the CloudFront URL
+        # Update the eb_url to use a simpler domain format
+        eb_domain = 'romax11425-cart-api-prod.eu-west-1.elasticbeanstalk.com'
+
+        # Create CloudFront Distribution for API
+        cart_distribution = cloudfront.Distribution(
+            self, 'CartApiDistribution',
+            default_behavior=cloudfront.BehaviorOptions(
+                origin=origins.HttpOrigin(
+                    eb_domain,
+                    protocol_policy=cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+                    origin_ssl_protocols=[cloudfront.OriginSslPolicy.TLS_V1_2]
+                ),
+                allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
+                cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
+                origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER,
+                viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+            ),
+            enabled=True,
+            price_class=cloudfront.PriceClass.PRICE_CLASS_100
+        )
+
+        # Output CloudFront URLs with unique IDs
+        CfnOutput(
+            self, 'CartApiDistributionDomainName',  # Changed ID to be unique
+            value=cart_distribution.distribution_domain_name,
+            description='Cart API Distribution Domain Name'
+        )
+        
         CfnOutput(
             self, "DistributionDomainName",
             value=distribution.distribution_domain_name,
